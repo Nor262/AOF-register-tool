@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "AOF Smart Register Assistant (HVTC)",
-  "version": "2.5.0",
-  "description": "Bảng điều khiển đăng ký tín chỉ HVTC trực quan: Bắn API chuẩn, Smart Retry chống 429, Tự động nhảy lớp dự phòng & Lưu dữ liệu.",
+  "name": "AOF Smart Register Assistant v3.0 (HVTC)",
+  "version": "3.0.0",
+  "description": "Giao diện trực quan đăng ký tín chỉ HVTC: Kéo thả & đánh số thứ tự ưu tiên lớp theo từng môn, thông báo chi tiết, tự nhảy lớp khi hết slot.",
   "content_scripts": [
     {
       "matches": ["https://congdangky.hvtc.edu.vn/*"],
