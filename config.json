@@ -1,0 +1,8 @@
+{
+  "username": "YOUR_STUDENT_ID",
+  "password": "YOUR_PASSWORD_HERE",
+  "period_id": 55,
+  "target_class_ids": [],
+  "auto_chot_du_lieu": true,
+  "target_time": "08:00:00"
+}
