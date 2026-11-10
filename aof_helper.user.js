@@ -1,8 +1,8 @@
 // ==UserScript==
-// @name         AOF Smart Register Assistant v4.0 (HVTC)
+// @name         AOF Smart Register Assistant v4.1 (HVTC)
 // @namespace    http://tampermonkey.net/
-// @version      4.0.0
-// @description  Bảng điều khiển đăng ký tín chỉ HVTC v4.0: Giao diện Emerald OKLCH, đổi màu dòng trạng thái từng môn, bảng tổng kết, âm báo & đồng bộ Redux không F5.
+// @version      4.1.0
+// @description  Bảng điều khiển đăng ký tín chỉ HVTC v4.1: Giao diện Emerald OKLCH gọn không tràn màn hình, bắn liên tục đến khi đỗ, tự động khóa sổ & đồng bộ Redux không F5.
 // @author       Antigravity
 // @match        https://congdangky.hvtc.edu.vn/*
 // @grant        none
@@ -52,7 +52,8 @@
         { classId: 87314, id_mon: 775, ky_hieu: "CVA0243", ten_mon: "Trị giá hải quan", ten_lop_hp: "CVA0243CQ62.02.2_LT", so_tin_chi: 2, slotsLeft: 75, stu_nhomlop_ids: 8014, nhom_tu_chon: 2 }
     ];
 
-    // CSS theo đúng bộ biến Light Mode (:root) mà người dùng cung cấp
+    // CSS theo đúng bộ biến Light Mode (:root) Outfit + OKLCH Emerald
+    // Đảm bảo max-height: calc(100vh - 20px) để KHÔNG BAO GIỜ tràn khỏi màn hình!
     const styleEl = document.createElement('style');
     styleEl.id = 'aof-v4-styles';
     styleEl.textContent = `
@@ -110,23 +111,26 @@
 
         #aof-v4-root {
             position: fixed;
-            bottom: 14px;
-            right: 14px;
+            bottom: 10px;
+            right: 12px;
             z-index: 999998;
-            width: 485px;
+            width: 480px;
+            max-height: calc(100vh - 20px);
+            display: flex;
+            flex-direction: column;
             background: var(--card);
             border: 1px solid var(--border);
             border-radius: var(--radius-xl);
             box-shadow: var(--shadow-2xl);
-            font-size: 12.5px;
+            font-size: 12px;
             overflow: hidden;
-            transition: all 0.2s ease;
         }
 
         #aof-v4-header {
+            flex-shrink: 0;
             background: var(--primary);
             color: var(--primary-foreground);
-            padding: 10px 14px;
+            padding: 8px 12px;
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -136,33 +140,36 @@
         }
 
         #aof-v4-conn {
-            padding: 7px 14px;
+            flex-shrink: 0;
+            padding: 6px 12px;
             background: var(--muted);
             border-bottom: 1px solid var(--border);
             display: flex;
             justify-content: space-between;
             align-items: center;
-            font-size: 12px;
+            font-size: 11.5px;
         }
 
         #aof-v4-body {
-            padding: 12px 14px;
+            padding: 9px 12px;
             display: flex;
             flex-direction: column;
-            gap: 10px;
+            gap: 7px;
             background: var(--background);
+            overflow-y: auto;
         }
 
-        /* Bảng tổng kết nổi bật (Summary Card) */
+        /* Bảng tổng kết gọn gàng ngay trên đầu */
         #aof-v4-summary {
             border-radius: var(--radius-lg);
             border: 1.5px solid var(--chart-5);
             background: oklch(0.975 0.03 160.9);
-            padding: 9px 11px;
-            box-shadow: var(--shadow-xs);
+            padding: 7px 10px;
+            box-shadow: var(--shadow-2xs);
             display: none;
             flex-direction: column;
-            gap: 6px;
+            gap: 4px;
+            flex-shrink: 0;
         }
         #aof-v4-summary.show {
             display: flex;
@@ -178,7 +185,7 @@
 
         .aof-progress-track {
             width: 100%;
-            height: 6px;
+            height: 5px;
             background: var(--muted);
             border-radius: 999px;
             overflow: hidden;
@@ -193,17 +200,17 @@
         .aof-chip-list {
             display: flex;
             flex-wrap: wrap;
-            gap: 4px;
+            gap: 3px;
         }
         .aof-chip-ok {
             display: inline-flex;
             align-items: center;
-            gap: 4px;
-            padding: 2px 7px;
+            gap: 3px;
+            padding: 1px 6px;
             border-radius: var(--radius-sm);
             background: var(--primary);
             color: var(--primary-foreground);
-            font-size: 11px;
+            font-size: 10.5px;
             font-weight: 700;
             border: 1px solid var(--chart-5);
         }
@@ -211,19 +218,19 @@
         /* Tabs Chọn Nhóm Lớp */
         .aof-group-tabs {
             display: flex;
-            gap: 6px;
+            gap: 5px;
             background: var(--muted);
-            padding: 4px;
+            padding: 3px;
             border-radius: var(--radius-lg);
             border: 1px solid var(--border);
         }
         .aof-group-tab {
             flex: 1;
-            padding: 6px 10px;
+            padding: 5px 8px;
             border-radius: var(--radius-md);
             border: none;
             font-weight: 700;
-            font-size: 12px;
+            font-size: 11.5px;
             cursor: pointer;
             background: transparent;
             color: var(--popover-foreground);
@@ -238,21 +245,21 @@
         /* Khung Dropdown chọn ưu tiên */
         .aof-select-grid {
             display: grid;
-            grid-template-columns: 138px 1fr;
-            gap: 6px 8px;
+            grid-template-columns: 130px 1fr;
+            gap: 5px 8px;
             align-items: center;
             background: var(--muted);
-            padding: 8px 10px;
+            padding: 6px 9px;
             border-radius: var(--radius-lg);
             border: 1px solid var(--border);
         }
         .aof-select-box {
             width: 100%;
-            padding: 5px 8px;
+            padding: 4px 7px;
             border-radius: var(--radius-md);
             border: 1px solid var(--border);
             background: var(--card);
-            font-size: 11.5px;
+            font-size: 11px;
             font-weight: 600;
             color: var(--foreground);
             cursor: pointer;
@@ -264,7 +271,7 @@
             box-shadow: 0 0 0 2px oklch(0.8348 0.1302 160.9080 / 0.35);
         }
 
-        /* Danh sách 7 môn học */
+        /* Danh sách 7 môn học - Cố định 2 dòng gọn gàng để không bao giờ bị giãn chiều cao */
         .aof-table-wrap {
             border: 1px solid var(--border);
             border-radius: var(--radius-lg);
@@ -276,11 +283,11 @@
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding: 7px 10px;
+            padding: 5.5px 9px;
             border-bottom: 1px solid var(--border);
             border-left: 4px solid transparent;
-            gap: 8px;
-            transition: background 0.2s ease, border-color 0.2s ease;
+            gap: 6px;
+            transition: background 0.15s ease, border-color 0.15s ease;
         }
         .aof-subj-row:last-child {
             border-bottom: none;
@@ -305,9 +312,9 @@
         }
 
         .aof-status-badge {
-            padding: 4px 8px;
+            padding: 3px 7px;
             border-radius: var(--radius-md);
-            font-size: 11px;
+            font-size: 10.5px;
             font-weight: 700;
             white-space: nowrap;
             box-shadow: var(--shadow-2xs);
@@ -335,7 +342,7 @@
 
         /* Nút bấm chính */
         .aof-btn-main {
-            padding: 8px 12px;
+            padding: 7px 10px;
             border-radius: var(--radius-md);
             border: 1px solid transparent;
             font-weight: 700;
@@ -364,7 +371,7 @@
             color: var(--destructive-foreground);
         }
         .aof-btn-sm {
-            padding: 3px 9px;
+            padding: 3px 8px;
             border-radius: var(--radius-sm);
             border: 1px solid var(--border);
             background: var(--card);
@@ -381,13 +388,13 @@
         /* Toast góc trên bên phải màn hình */
         #aof-toast-container {
             position: fixed;
-            top: 16px;
-            right: 16px;
+            top: 14px;
+            right: 14px;
             z-index: 999999;
             display: flex;
             flex-direction: column;
             gap: 8px;
-            max-width: 380px;
+            max-width: 370px;
             pointer-events: none;
         }
         .aof-toast {
@@ -397,13 +404,13 @@
             border: 1px solid var(--border);
             border-left: 5px solid var(--chart-5);
             border-radius: var(--radius-lg);
-            padding: 10px 12px;
+            padding: 9px 12px;
             box-shadow: var(--shadow-xl);
             display: flex;
             align-items: flex-start;
             justify-content: space-between;
             gap: 10px;
-            animation: aofSlideIn 0.22s ease-out;
+            animation: aofSlideIn 0.2s ease-out;
         }
         .aof-toast.toast-warn {
             border-left-color: var(--chart-4);
@@ -434,49 +441,42 @@
     root.id = 'aof-v4-root';
     root.innerHTML = `
         <div id="aof-v4-header">
-            <div style="font-weight: 800; font-size: 13.5px; display: flex; align-items: center; gap: 7px;">
-                <span>⚡ AOF Auto Register v4.0</span>
+            <div style="font-weight: 800; font-size: 13px; display: flex; align-items: center; gap: 6px;">
+                <span>⚡ AOF Auto Register v4.1</span>
             </div>
             <div style="display: flex; align-items: center; gap: 8px;">
-                <span id="aof-v4-clock" style="font-family: var(--font-mono); font-size: 12.5px; font-weight: 700; background: oklch(0.2626 0.0147 166.4589 / 0.12); color: var(--primary-foreground); padding: 2px 8px; border-radius: var(--radius-sm);">--:--:--</span>
-                <span id="aof-v4-toggle" style="font-size: 13px; font-weight: bold;">▼</span>
+                <span id="aof-v4-clock" style="font-family: var(--font-mono); font-size: 12px; font-weight: 700; background: oklch(0.2626 0.0147 166.4589 / 0.12); color: var(--primary-foreground); padding: 2px 7px; border-radius: var(--radius-sm);">--:--:--</span>
+                <span id="aof-v4-toggle" style="font-size: 12px; font-weight: bold;">▼</span>
             </div>
         </div>
 
         <div id="aof-v4-conn">
             <span id="aof-v4-conn-msg" style="font-weight: 600; color: var(--muted-foreground);">🔌 Đang kiểm tra kết nối...</span>
-            <div style="display: flex; gap: 5px;">
-                <button id="aof-v4-btn-reset" class="aof-btn-sm" title="Đặt lại trạng thái các môn về Chờ đăng ký">↺ Đặt lại</button>
-                <button id="aof-v4-btn-check" class="aof-btn-sm">🔄 Đồng bộ</button>
+            <div style="display: flex; gap: 4px;">
+                <button id="aof-v4-btn-refresh-web" class="aof-btn-sm" title="Cập nhật bảng Lớp đã đăng ký của web (Không F5)">🔄 Làm mới bảng web</button>
+                <button id="aof-v4-btn-reset" class="aof-btn-sm" title="Đặt lại trạng thái các môn về mặc định">↺ Đặt lại</button>
             </div>
         </div>
 
         <div id="aof-v4-body">
-            <!-- BẢNG TỔNG KẾT NỔI BẬT NGAY TRÊN ĐẦU EXTENSION -->
+            <!-- BẢNG TỔNG KẾT NỔI BẬT GỌN GÀNG TRÊN ĐẦU -->
             <div id="aof-v4-summary">
                 <div style="display: flex; justify-content: space-between; align-items: center; gap: 6px;">
-                    <span id="aof-sum-title" style="font-weight: 800; font-size: 12px; color: var(--foreground);">🎯 KẾT QUẢ ĐĂNG KÝ</span>
-                    <span id="aof-sum-counter" style="font-weight: 800; font-size: 11.5px; padding: 2px 7px; border-radius: var(--radius-sm); background: var(--primary); color: var(--primary-foreground);">Đã đỗ: 0/7 môn (0/18 TC)</span>
+                    <span id="aof-sum-title" style="font-weight: 800; font-size: 11.5px; color: var(--foreground);">🎯 KẾT QUẢ ĐĂNG KÝ</span>
+                    <span id="aof-sum-counter" style="font-weight: 800; font-size: 11px; padding: 1.5px 7px; border-radius: var(--radius-sm); background: var(--primary); color: var(--primary-foreground);">Đã đỗ: 0/7 môn (0/18 TC)</span>
                 </div>
                 <div class="aof-progress-track">
                     <div id="aof-sum-bar" class="aof-progress-bar" style="width: 0%;"></div>
                 </div>
-                <div id="aof-sum-detail" style="font-size: 11.5px; color: var(--muted-foreground); line-height: 1.4;"></div>
+                <div id="aof-sum-detail" style="font-size: 11px; color: var(--muted-foreground); line-height: 1.35;"></div>
                 <div id="aof-sum-chips" class="aof-chip-list"></div>
-                <div id="aof-sum-footer" style="display: flex; justify-content: space-between; align-items: center; padding-top: 4px; border-top: 1px dashed var(--border); font-size: 11px;">
-                    <span id="aof-sum-save-status" style="font-weight: 700; color: var(--primary-foreground);">💾 Trạng thái: Chờ lưu dữ liệu</span>
-                    <div style="display: flex; gap: 5px;">
-                        <button id="aof-btn-manual-save" class="aof-btn-sm" style="background: var(--primary); color: var(--primary-foreground); border-color: var(--chart-5); font-weight: 700;">💾 Lưu dữ liệu ngay</button>
-                        <button id="aof-btn-refresh-web" class="aof-btn-sm">🔄 Làm mới bảng web</button>
-                    </div>
-                </div>
             </div>
 
             <!-- 1. Chọn Nhóm Lớp -->
             <div>
-                <div style="font-weight: 700; font-size: 12px; margin-bottom: 5px; display: flex; justify-content: space-between; align-items: center;">
+                <div style="font-weight: 700; font-size: 11.5px; margin-bottom: 4px; display: flex; justify-content: space-between; align-items: center;">
                     <span>1. Chọn Nhóm Lớp Đồng Bộ:</span>
-                    <span id="aof-v4-tc-count" style="background: var(--primary); color: var(--primary-foreground); padding: 1px 8px; border-radius: var(--radius-sm); font-weight: 700; font-size: 11.5px;">7 môn (18 TC)</span>
+                    <span id="aof-v4-tc-count" style="background: var(--primary); color: var(--primary-foreground); padding: 1px 7px; border-radius: var(--radius-sm); font-weight: 700; font-size: 11px;">7 môn (18 TC)</span>
                 </div>
                 <div class="aof-group-tabs">
                     <button id="aof-tab-g1" class="aof-group-tab active">Nhóm 1 (CQ62.02.1_LT)</button>
@@ -486,25 +486,25 @@
 
             <!-- 2. Chọn lớp ưu tiên bằng Dropdown (Tiếng Anh & Tự chọn) -->
             <div class="aof-select-grid">
-                <label style="font-weight: 600; font-size: 11.5px; color: var(--foreground);">2. Ưu tiên Tiếng Anh:</label>
+                <label style="font-weight: 600; font-size: 11px; color: var(--foreground);">2. Ưu tiên Tiếng Anh:</label>
                 <select id="aof-sel-eng" class="aof-select-box"></select>
 
-                <label style="font-weight: 600; font-size: 11.5px; color: var(--foreground);">3. Ưu tiên Tự chọn:</label>
+                <label style="font-weight: 600; font-size: 11px; color: var(--foreground);">3. Ưu tiên Tự chọn:</label>
                 <select id="aof-sel-elec" class="aof-select-box"></select>
             </div>
 
-            <!-- 3. Danh sách đầy đủ 7 môn (Đổi màu toàn bộ dòng khi đỗ / chờ / lỗi) -->
+            <!-- 3. Danh sách đầy đủ 7 môn (Giữ cố định 2 dòng/môn, không bao giờ làm tràn màn hình) -->
             <div id="aof-v4-list" class="aof-table-wrap"></div>
 
-            <!-- 4. Cài đặt Giờ & Tự động lưu -->
-            <div style="display: flex; justify-content: space-between; align-items: center; background: var(--muted); padding: 7px 11px; border-radius: var(--radius-lg); border: 1px solid var(--border);">
+            <!-- 4. Cài đặt Giờ & Tự động chốt sổ -->
+            <div style="display: flex; justify-content: space-between; align-items: center; background: var(--muted); padding: 6px 10px; border-radius: var(--radius-lg); border: 1px solid var(--border);">
                 <div style="display: flex; align-items: center; gap: 5px;">
-                    <label style="font-weight: 700; font-size: 12px; color: var(--foreground);">⏰ Hẹn giờ bắn:</label>
-                    <input id="aof-v4-time" type="text" value="08:00:00" style="width: 78px; padding: 3px 6px; font-family: var(--font-mono); font-weight: 700; background: var(--card); color: var(--foreground); border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 12px; text-align: center;">
+                    <label style="font-weight: 700; font-size: 11.5px; color: var(--foreground);">⏰ Hẹn giờ bắn:</label>
+                    <input id="aof-v4-time" type="text" value="08:00:00" style="width: 74px; padding: 2px 5px; font-family: var(--font-mono); font-weight: 700; background: var(--card); color: var(--foreground); border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 11.5px; text-align: center;">
                 </div>
-                <label style="font-weight: 600; font-size: 12px; cursor: pointer; display: flex; align-items: center; gap: 5px; color: var(--foreground);">
-                    <input id="aof-v4-autosave" type="checkbox" checked style="width: 14px; height: 14px; accent-color: oklch(0.55 0.14 160);"> Tự bấm "Lưu dữ liệu"
-                </label>
+                <span style="font-size: 11px; font-weight: 600; color: oklch(0.35 0.11 160);" title="Hệ thống trường sẽ tự hủy môn sau 15 phút nếu không chốt. Tool sẽ tự động chốt ngay khi đỗ!">
+                    🔒 Tự động khóa sổ khi đỗ
+                </span>
             </div>
 
             <!-- 5. Nút điều khiển -->
@@ -548,16 +548,13 @@
             };
 
             if (type === 'subject_ok') {
-                // Tiếng "Ting!" trong trẻo khi đỗ 1 môn
                 playNote(880, 0, 0.16, 0.14);
                 playNote(1318.5, 0.09, 0.28, 0.16);
             } else if (type === 'all_done') {
-                // Hợp âm chiến thắng khi hoàn tất / lưu dữ liệu xong
                 playNote(587.33, 0, 0.16, 0.15);
                 playNote(880, 0.11, 0.18, 0.16);
                 playNote(1174.66, 0.22, 0.42, 0.18);
             } else if (type === 'error') {
-                // Tiếng báo nhẹ khi cổng chưa mở hoặc lỗi
                 playNote(340, 0, 0.14, 0.10);
                 playNote(260, 0.12, 0.22, 0.10);
             }
@@ -565,16 +562,16 @@
     }
 
     // ==================== TOAST GÓC MÀN HÌNH & BROWSER NOTIFICATION ====================
-    function showToast(title, message, type = 'success', durationMs = 5000) {
+    function showToast(title, message, type = 'success', durationMs = 4500) {
         const toast = document.createElement('div');
         toast.className = `aof-toast toast-${type}`;
         const iconMap = { success: '✅', warn: '⚠️', error: '❌', info: 'ℹ️' };
         toast.innerHTML = `
             <div style="flex: 1;">
-                <div style="font-weight: 800; font-size: 12.5px; color: var(--foreground); margin-bottom: 2px;">
+                <div style="font-weight: 800; font-size: 12px; color: var(--foreground); margin-bottom: 2px;">
                     ${iconMap[type] || '🔔'} ${title}
                 </div>
-                <div style="font-size: 11.5px; color: var(--muted-foreground); line-height: 1.35;">
+                <div style="font-size: 11px; color: var(--muted-foreground); line-height: 1.35;">
                     ${message}
                 </div>
             </div>
@@ -605,7 +602,7 @@
         } catch (e) {}
     }
 
-    // ==================== QUẢN LÝ TRẠNG THÁI (KHÔNG BAO GIỜ BỊ MẤT KHI REBUILD) ====================
+    // ==================== QUẢN LÝ TRẠNG THÁI ====================
     let savedConfig = {};
     try { savedConfig = JSON.parse(localStorage.getItem(STORAGE_KEY_CONFIG) || '{}'); } catch (e) {}
 
@@ -614,15 +611,12 @@
     let elecFirstCode = savedConfig.elecFirstCode || 'CAC0084';
     let disabledKeys = new Set(savedConfig.disabledKeys || []);
 
-    // Map lưu trạng thái từng môn theo key ('INS0001', 'SFL0115', ..., 'ELECTIVE')
-    // Không bao giờ bị ghi đè khi gọi buildGroupSubjects()!
     const statusMap = new Map();
     let summaryState = {
         visible: false,
-        mode: 'idle', // 'pending' | 'success' | 'error'
+        mode: 'idle',
         title: '🎯 KẾT QUẢ ĐĂNG KÝ',
         detail: '',
-        saveStatusText: '💾 Trạng thái: Chờ lưu dữ liệu',
         isSaved: false
     };
 
@@ -686,7 +680,6 @@
         }
     };
 
-    // Cập nhật Dropdown Tiếng Anh & Tự chọn
     function renderDropdownOptions() {
         const gLabel = selectedGroupId === 8013 ? '02.1' : '02.2';
         selEngEl.innerHTML = `
@@ -705,11 +698,11 @@
     function getRowState(key) {
         if (!statusMap.has(key)) {
             statusMap.set(key, {
-                statusType: 'idle', // 'idle' | 'pending' | 'success' | 'error'
+                statusType: 'idle',
                 statusText: 'Chờ đăng ký',
                 registeredClass: null,
                 registeredClassId: null,
-                subMessage: ''
+                errorReason: ''
             });
         }
         return statusMap.get(key);
@@ -748,7 +741,6 @@
             }
         });
 
-        // Sắp xếp Tiếng Anh chuyên ngành 1 theo lựa chọn Dropdown
         const engRow = mandatoryMap.get('SFL0115');
         if (engRow && engRow.classes.length > 1) {
             engRow.classes.sort((a, b) => {
@@ -816,10 +808,7 @@
             chip.innerHTML = `✅ ${r.ten_mon.replace(' (Tự chọn)', '')}: <b>${st.registeredClass || r.classes[0]?.ten_lop_hp}</b>`;
             chipsEl.appendChild(chip);
         });
-
-        const saveEl = document.getElementById('aof-sum-save-status');
-        saveEl.textContent = summaryState.saveStatusText || '💾 Trạng thái: Chờ lưu dữ liệu';
-        saveEl.style.color = summaryState.isSaved ? 'oklch(0.32 0.11 160)' : 'var(--muted-foreground)';
+        chipsEl.style.display = okRows.length > 0 ? 'flex' : 'none';
     }
 
     function renderAll() {
@@ -846,34 +835,33 @@
                 ? '✅ '
                 : (st.statusType === 'pending' ? '⏳ ' : (st.statusType === 'error' ? '❌ ' : ''));
 
-            let classDetailHtml = '';
+            // Luôn giữ đúng 1 dòng thông tin phụ bên dưới tên môn để bảng KHÔNG BAO GIỜ bị giãn chiều cao!
+            let line2Html = '';
             if (st.statusType === 'success' && st.registeredClass) {
-                classDetailHtml = `
-                    <div style="font-size: 11.5px; color: oklch(0.30 0.09 160); font-weight: 700; margin-top: 2px;">
+                line2Html = `
+                    <div style="font-size: 11px; color: oklch(0.30 0.09 160); font-weight: 700; margin-top: 1px;">
                         🎯 ĐÃ ĐỖ LỚP: <span style="text-decoration: underline;">${st.registeredClass}</span> ${st.registeredClassId ? `(#${st.registeredClassId})` : ''}
                     </div>
                 `;
+            } else if (st.statusType === 'error' && st.errorReason) {
+                line2Html = `
+                    <div style="font-size: 11px; color: var(--destructive); font-weight: 600; margin-top: 1px;">
+                        ⛔ ${st.errorReason}
+                    </div>
+                `;
             } else if (c1 && c2) {
-                classDetailHtml = `
-                    <div style="font-size: 11px; color: var(--muted-foreground); margin-top: 2px;">
+                line2Html = `
+                    <div style="font-size: 10.5px; color: var(--muted-foreground); margin-top: 1px;">
                         ƯT#1: <b style="color:var(--foreground);">${c1.ten_lop_hp}</b> <span style="color:oklch(0.45 0.12 160); font-weight:600;">(${c1.slotsLeft} chỗ)</span>
                         <span> → ƯT#2: <b>${c2.ten_lop_hp}</b> (${c2.slotsLeft} chỗ)</span>
                     </div>
                 `;
             } else if (c1) {
-                classDetailHtml = `
-                    <div style="font-size: 11px; color: var(--muted-foreground); margin-top: 2px;">
+                line2Html = `
+                    <div style="font-size: 10.5px; color: var(--muted-foreground); margin-top: 1px;">
                         Lớp: <b style="color:var(--foreground);">${c1.ten_lop_hp}</b> <span>(#${c1.classId})</span> • <span style="color:oklch(0.45 0.12 160); font-weight:700;">Còn ${c1.slotsLeft} chỗ</span>
                     </div>
                 `;
-            }
-
-            let subMsgHtml = '';
-            if (st.subMessage) {
-                const subColor = st.statusType === 'error'
-                    ? 'var(--destructive)'
-                    : (st.statusType === 'pending' ? 'oklch(0.42 0.10 65)' : 'oklch(0.32 0.09 160)');
-                subMsgHtml = `<div style="font-size: 11px; font-weight: 600; color: ${subColor}; margin-top: 2px;">${st.subMessage}</div>`;
             }
 
             const div = document.createElement('div');
@@ -883,14 +871,13 @@
             }
 
             div.innerHTML = `
-                <label style="display: flex; align-items: flex-start; gap: 8px; cursor: pointer; flex: 1;">
-                    <input type="checkbox" class="aof-chk-item" ${row.enabled ? 'checked' : ''} style="margin-top: 3px; width: 14px; height: 14px; cursor: pointer; accent-color: oklch(0.55 0.14 160);">
-                    <div style="flex: 1;">
-                        <div style="font-weight: 700; font-size: 12.5px; color: var(--foreground);">
-                            ${statusIcon}${row.ten_mon} <span style="font-weight: 500; font-size: 11.5px; color: var(--popover-foreground);">(${row.so_tin_chi} TC)</span>
+                <label style="display: flex; align-items: flex-start; gap: 7px; cursor: pointer; flex: 1; min-width: 0;">
+                    <input type="checkbox" class="aof-chk-item" ${row.enabled ? 'checked' : ''} style="margin-top: 2px; width: 13.5px; height: 13.5px; cursor: pointer; accent-color: oklch(0.55 0.14 160);">
+                    <div style="flex: 1; min-width: 0;">
+                        <div style="font-weight: 700; font-size: 12px; color: var(--foreground);">
+                            ${statusIcon}${row.ten_mon} <span style="font-weight: 500; font-size: 11px; color: var(--popover-foreground);">(${row.so_tin_chi} TC)</span>
                         </div>
-                        ${classDetailHtml}
-                        ${subMsgHtml}
+                        ${line2Html}
                     </div>
                 </label>
                 <span class="${badgeClass}">
@@ -945,7 +932,6 @@
             mode: 'idle',
             title: '🎯 KẾT QUẢ ĐĂNG KÝ',
             detail: '',
-            saveStatusText: '💾 Trạng thái: Chờ lưu dữ liệu',
             isSaved: false
         };
         persistSessionStatus();
@@ -972,7 +958,6 @@
         return { headers, periodId, qToken, accessToken };
     }
 
-    // Chỉ làm mới Queue Token (Không gọi buildGroupSubjects để tránh làm mất tiến trình đang chạy)
     async function refreshQueueTokenOnly() {
         const { headers, accessToken, periodId } = getAuthHeaders(false);
         if (!accessToken) return null;
@@ -992,7 +977,6 @@
     }
 
     // Tìm trực tiếp Redux Store của trang web gốc từ cây React 18 Fiber (#root)
-    // Dựa trên source code gốc App.tsx: <Provider store={store}> nằm ngay dưới #root
     let cachedReduxStore = null;
     function getHostReduxStore() {
         if (cachedReduxStore && typeof cachedReduxStore.dispatch === 'function') {
@@ -1031,17 +1015,14 @@
         return null;
     }
 
-    // Tự động làm mới bảng "Danh sách các lớp tín chỉ đã đăng ký" của trang web gốc
-    // HOÀN TOÀN BẰNG REDUX (KHÔNG F5 / KHÔNG RELOAD TRANG / KHÔNG NGẮT WEBSOCKET SIGNALR)
+    // Tự động làm mới bảng "Danh sách các lớp tín chỉ đã đăng ký" của trang web gốc qua Redux (0ms, không F5)
     function refreshHostWebTable(myListOptional = null, chotDataOptional = null) {
         try {
             const store = getHostReduxStore();
             if (store) {
-                // Nếu đã có sẵn danh sách từ /api/registration/my thì bơm thẳng vào Reducer ngay lập tức (0ms)
                 if (Array.isArray(myListOptional)) {
                     store.dispatch({ type: 'REG_LOAD_MY_SUCCESS', payload: myListOptional });
                 }
-                // Nếu vừa chốt dữ liệu thành công thì cập nhật ngay trạng thái chốt trên giao diện gốc
                 if (chotDataOptional) {
                     store.dispatch({
                         type: 'REG_CHOT_DU_LIEU_SUCCESS',
@@ -1051,14 +1032,12 @@
                         }
                     });
                 }
-                // Đồng thời kích hoạt Saga chuẩn của trang web để đồng bộ lại danh sách ĐK & học phí
                 store.dispatch({ type: 'REG_LOAD_MY_START', payload: undefined });
                 store.dispatch({ type: 'FINANCIAL_LOAD_START', payload: undefined });
             }
         } catch (e) {}
     }
 
-    // Đồng bộ danh sách các môn ĐÃ ĐĂNG KÝ từ /api/registration/my để tô xanh ngay lập tức
     async function syncMyRegisteredClasses() {
         const { headers, accessToken } = getAuthHeaders(true);
         if (!accessToken) return [];
@@ -1066,7 +1045,6 @@
             const myRes = await fetch('/api/registration/my', { method: 'GET', headers }).then(r => r.json()).catch(() => null);
             if (myRes && myRes.is_success && Array.isArray(myRes.data)) {
                 const myList = myRes.data;
-                // Cập nhật luôn bảng của trang web gốc qua Redux Store (không cần F5)
                 refreshHostWebTable(myList);
 
                 if (myList.length > 0) {
@@ -1086,13 +1064,12 @@
 
                         if (rowKey) {
                             matchedAny = true;
-                            const isDbConfirmed = item.trang_thai === 1;
                             setRowState(rowKey, {
                                 statusType: 'success',
-                                statusText: `✅ Đã đỗ: ${tenLop}`,
+                                statusText: `✅ ĐÃ ĐỖ`,
                                 registeredClass: tenLop,
                                 registeredClassId: cid,
-                                subMessage: isDbConfirmed ? '💾 Đã xác nhận trong CSDL nhà trường' : '⏳ Đã giữ chỗ, đang chờ DB xác nhận'
+                                errorReason: ''
                             });
                         }
                     });
@@ -1102,10 +1079,7 @@
                         summaryState.visible = true;
                         summaryState.mode = 'success';
                         summaryState.title = '🎯 CÁC MÔN ĐÃ ĐĂNG KÝ TRÊN HỆ THỐNG';
-                        summaryState.detail = `Hệ thống ghi nhận bạn đã đăng ký <b>${myList.length}</b> môn học phần (${confirmedCount} môn đã ghi DB).`;
-                        if (confirmedCount > 0) {
-                            summaryState.saveStatusText = `💾 Đã ghi nhận ${confirmedCount} môn trong DB`;
-                        }
+                        summaryState.detail = `Hệ thống ghi nhận <b>${myList.length} môn</b> (${confirmedCount} môn đã vào DB).`;
                         persistSessionStatus();
                         renderAll();
                     }
@@ -1141,10 +1115,9 @@
                     sessionStorage.setItem('queue_token_map', JSON.stringify(qMap));
                 }
                 const name = userInfo?.ho_ten || 'Sinh viên';
-                connMsgEl.innerHTML = `<span style="color:oklch(0.35 0.11 160);">🟢 Đã kết nối: <b>${name}</b> (Đợt ${periodId})</span>`;
+                connMsgEl.innerHTML = `<span style="color:oklch(0.35 0.11 160);">🟢 <b>${name}</b> (Đợt ${periodId})</span>`;
                 if (showMsg) {
-                    const openStr = q.openAt ? q.openAt.replace('T', ' ') : '08:00:00';
-                    showToast('Kết nối thành công!', `Sinh viên: ${name} • Giờ mở cổng: ${openStr}`, 'success', 3500);
+                    showToast('Đã đồng bộ bảng web & kết nối!', `Sinh viên: ${name} • Bảng đăng ký đã được làm mới ngầm (Không F5).`, 'success', 3000);
                 }
             } else {
                 connMsgEl.innerHTML = `<span style="color:var(--destructive);">🔴 Lỗi kết nối (${qRes?.message || 'Hết phiên'})</span>`;
@@ -1159,44 +1132,16 @@
             }
 
             await syncMyRegisteredClasses();
+            refreshHostWebTable();
         } catch (err) {
             connMsgEl.innerHTML = `<span style="color:var(--destructive);">🔴 Lỗi mạng</span>`;
         }
     }
 
-    document.getElementById('aof-v4-btn-check').onclick = () => checkConnectionAndSync(true);
-    document.getElementById('aof-btn-refresh-web').onclick = async () => {
-        await syncMyRegisteredClasses();
-        refreshHostWebTable();
-        showToast('Đã đồng bộ bảng web (Không F5)', 'Bảng "Danh sách các lớp tín chỉ đã đăng ký" đã được cập nhật ngầm qua Redux!', 'success', 2500);
-    };
+    // Nút "🔄 Làm mới bảng web" nằm gọn ngay trên thanh kết nối
+    document.getElementById('aof-v4-btn-refresh-web').onclick = () => checkConnectionAndSync(true);
 
-    // Nút Lưu dữ liệu thủ công ngay trong bảng tổng kết
-    document.getElementById('aof-btn-manual-save').onclick = async () => {
-        const { headers } = getAuthHeaders(true);
-        showToast('Đang gửi yêu cầu Lưu dữ liệu', 'Đang gọi API chốt dữ liệu đăng ký...', 'info', 2500);
-        const chotRes = await fetch('/api/registration/chot-du-lieu', {
-            method: 'POST',
-            headers,
-            body: JSON.stringify({})
-        }).then(r => r.json()).catch(() => null);
-
-        if (chotRes && chotRes.is_success) {
-            summaryState.isSaved = true;
-            summaryState.saveStatusText = '💾 ĐÃ LƯU DỮ LIỆU THÀNH CÔNG!';
-            persistSessionStatus();
-            renderSummary();
-            playChime('all_done');
-            showToast('Lưu dữ liệu thành công!', 'Toàn bộ tín chỉ đã được khóa sổ an toàn (không cần F5)!', 'success', 6000);
-            sendBrowserNotification('🎉 Đã Lưu Dữ Liệu Tín Chỉ!', 'Toàn bộ các lớp học phần đã được chốt thành công.');
-            refreshHostWebTable(null, chotRes.data);
-        } else {
-            const errMsg = chotRes?.message || 'Chưa có môn nào được ghi nhận hoặc cổng chưa mở';
-            showToast('Chưa thể Lưu dữ liệu', errMsg, 'warn', 4500);
-        }
-    };
-
-    // ==================== THUẬT TOÁN BẮN ĐĂNG KÝ & PHẢN HỒI TRỰC QUAN TỨC THÌ ====================
+    // ==================== THUẬT TOÁN BẮN ĐĂNG KÝ LIÊN TỤC ĐẾN KHI THÀNH CÔNG ====================
     function translateReason(reasonCode, rawMsg, httpStatus) {
         if (rawMsg && rawMsg.length > 0 && rawMsg !== reasonCode) return rawMsg;
         const map = {
@@ -1211,23 +1156,23 @@
             'ALREADY_REGISTERED_SAME_MON': 'Đã đăng ký học phần này rồi'
         };
         if (map[reasonCode]) return map[reasonCode];
-        if (httpStatus === 403) return 'Cổng chưa mở hoặc thiếu lượt hàng chờ (HTTP 403)';
-        if (httpStatus === 400) return rawMsg || 'Yêu cầu bị từ chối - Cổng chưa mở (HTTP 400)';
+        if (httpStatus === 403) return 'Cổng chưa mở hoặc đang chờ lượt (HTTP 403)';
+        if (httpStatus === 400) return rawMsg || 'Chưa đến thời gian đăng ký (HTTP 400)';
         if (httpStatus === 429) return 'Quá giới hạn tốc độ (Đang đợi 429)';
         if (httpStatus === 401) return 'Hết phiên đăng nhập (HTTP 401)';
         return rawMsg || reasonCode || `Mã phản hồi HTTP ${httpStatus}`;
     }
 
-    async function registerSubjectWithFallback(row, round, maxRounds) {
+    async function registerSubjectWithFallback(row, round) {
         for (let i = 0; i < row.classes.length; i++) {
             if (!isRunning) return { done: false };
             const cls = row.classes[i];
-            const prioTag = row.classes.length > 1 ? ` (ƯT#${i + 1})` : '';
+            const prioTag = row.classes.length > 1 ? ` ƯT#${i + 1}` : '';
 
             setRowState(row.key, {
                 statusType: 'pending',
-                statusText: `⏳ Đang gửi${prioTag} (Vòng ${round}/${maxRounds})`,
-                subMessage: `Đang bắn yêu cầu vào lớp ${cls.ten_lop_hp} (#${cls.classId})...`
+                statusText: `⏳ Vòng ${round}: Đang bắn${prioTag}...`,
+                errorReason: ''
             });
             renderAll();
 
@@ -1253,10 +1198,10 @@
             if (body && body.is_success) {
                 setRowState(row.key, {
                     statusType: 'success',
-                    statusText: `✅ ĐÃ ĐỖ: ${cls.ten_lop_hp}`,
+                    statusText: `✅ ĐÃ ĐỖ`,
                     registeredClass: cls.ten_lop_hp,
                     registeredClassId: cls.classId,
-                    subMessage: `🎉 Giữ chỗ thành công lúc ${new Date().toLocaleTimeString('vi-VN')}!`
+                    errorReason: ''
                 });
                 renderAll();
                 playChime('subject_ok');
@@ -1270,10 +1215,10 @@
             if (reasonCode === 'ALREADY_REGISTERED' || reasonCode === 'ALREADY_REGISTERED_SAME_MON') {
                 setRowState(row.key, {
                     statusType: 'success',
-                    statusText: `✅ Đã ĐK: ${cls.ten_lop_hp}`,
+                    statusText: `✅ ĐÃ ĐỖ`,
                     registeredClass: cls.ten_lop_hp,
                     registeredClassId: cls.classId,
-                    subMessage: `Học phần này đã được đăng ký thành công trên hệ thống.`
+                    errorReason: ''
                 });
                 renderAll();
                 refreshHostWebTable();
@@ -1286,8 +1231,7 @@
                     const nextCls = row.classes[i + 1];
                     setRowState(row.key, {
                         statusType: 'pending',
-                        statusText: `⚡ ƯT#1 đầy → Sang ƯT#2`,
-                        subMessage: `⚠️ Lớp ${cls.ten_lop_hp} (${friendlyMsg}) → Đang tự động nhảy sang ${nextCls.ten_lop_hp}!`
+                        statusText: `⚡ ƯT#1 đầy → Sang ƯT#2`
                     });
                     renderAll();
                     showToast(`Tự động nhảy lớp ƯT#2`, `${row.ten_mon}: ${cls.ten_lop_hp} hết chỗ, chuyển sang ${nextCls.ten_lop_hp}!`, 'warn', 4000);
@@ -1296,7 +1240,7 @@
                     setRowState(row.key, {
                         statusType: 'error',
                         statusText: `❌ ${reasonCode === 'CLASS_FULL' ? 'Hết chỗ' : 'Bị chặn'}`,
-                        subMessage: `⛔ Không thể đăng ký: ${friendlyMsg}`
+                        errorReason: friendlyMsg
                     });
                     renderAll();
                     return { done: true, success: false, reason: friendlyMsg };
@@ -1307,21 +1251,21 @@
                 setRowState(row.key, {
                     statusType: 'error',
                     statusText: `⛔ Đủ TC tự chọn`,
-                    subMessage: `Bạn đã đăng ký đủ số tín chỉ tự chọn tối đa.`
+                    errorReason: friendlyMsg
                 });
                 renderAll();
                 return { done: true, success: false, reason: friendlyMsg };
             }
 
-            // TRƯỜNG HỢP 4: CỔNG CHƯA MỞ / CHỜ LƯỢT HÀNG CHỜ / 429 -> HIỂN THỊ RÕ LÝ DO & THỬ LẠI
+            // TRƯỜNG HỢP 4: CỔNG CHƯA MỞ / CHỜ LƯỢT HÀNG CHỜ / 429 -> TIẾP TỤC THỬ LẠI ĐẾN KHI ĐỖ!
             const shortBadge = httpStatus === 429
-                ? `⏳ Đợi 429 (Vòng ${round}/${maxRounds})`
-                : `⏳ Vòng ${round}/${maxRounds}: Chờ cổng`;
+                ? `⏳ Vòng ${round}: Đợi 429`
+                : `⏳ Vòng ${round}: Chờ cổng`;
 
             setRowState(row.key, {
                 statusType: 'pending',
                 statusText: shortBadge,
-                subMessage: `💬 Phản hồi máy chủ: "${friendlyMsg}"`
+                errorReason: ''
             });
             renderAll();
 
@@ -1335,7 +1279,30 @@
         return { done: true, success: false };
     }
 
-    async function runCampaign(isAutoTimed = false) {
+    // Tự động gọi API chốt dữ liệu ngầm ngay khi có môn được DB xác nhận (tránh bị Reaper hủy sau 15 phút)
+    async function autoLockConfirmedSubjects(expectedCount) {
+        const { headers } = getAuthHeaders(true);
+        for (let w = 0; w < 12; w++) {
+            await new Promise(r => setTimeout(r, 1000));
+            const myList = await syncMyRegisteredClasses();
+            if (myList.filter(x => x.trang_thai === 1).length >= expectedCount) break;
+        }
+        const chotRes = await fetch('/api/registration/chot-du-lieu', {
+            method: 'POST',
+            headers,
+            body: JSON.stringify({})
+        }).then(r => r.json()).catch(() => null);
+
+        if (chotRes && chotRes.is_success) {
+            summaryState.isSaved = true;
+            refreshHostWebTable(null, chotRes.data);
+            return true;
+        }
+        refreshHostWebTable();
+        return false;
+    }
+
+    async function runCampaign() {
         if (isRunning) return;
         isRunning = true;
         requestNotificationPermission();
@@ -1347,16 +1314,13 @@
             return;
         }
 
-        // Nếu bấm thủ công thì thử 4 vòng (nhanh gọn, báo kết quả ngay); nếu hẹn giờ 08:00:00 thì quét 14 vòng
-        const maxRounds = isAutoTimed ? 14 : 4;
-
-        // Bước 1: Đổi màu toàn bộ các dòng được chọn sang màu Vàng (Pending) ngay lập tức (0ms)
+        // Đổi màu toàn bộ các dòng được chọn sang màu Vàng (Pending) ngay lập tức (0ms)
         targets.forEach(r => {
             if (getRowState(r.key).statusType !== 'success') {
                 setRowState(r.key, {
                     statusType: 'pending',
-                    statusText: `⏳ Đang gửi (Vòng 1/${maxRounds})...`,
-                    subMessage: `Đang kết nối máy chủ HVTC...`
+                    statusText: `⏳ Vòng 1: Đang gửi...`,
+                    errorReason: ''
                 });
             }
         });
@@ -1364,19 +1328,16 @@
         summaryState = {
             visible: true,
             mode: 'pending',
-            title: `⏳ ĐANG THỰC THI ĐĂNG KÝ (VÒNG 1/${maxRounds})`,
-            detail: `Đang bắn đồng loạt <b>${targets.length} môn</b> lên cổng đăng ký HVTC...`,
-            saveStatusText: '💾 Trạng thái: Chờ hoàn tất để lưu dữ liệu',
+            title: `⏳ ĐANG BẮN LIÊN TỤC ĐẾN KHI ĐỖ (VÒNG 1)`,
+            detail: `Đang gửi đăng ký <b>${targets.length} môn</b>... (Bấm <b>Dừng</b> nếu muốn ngắt)`,
             isSaved: false
         };
         renderAll();
 
-        // Chỉ làm mới Queue Token, tuyệt đối KHÔNG ghi đè danh sách subjectRows
         const { qToken } = getAuthHeaders(true);
         if (!qToken) await refreshQueueTokenOnly();
 
         const finished = new Map();
-        // Những môn đã đỗ từ trước thì đưa luôn vào finished
         targets.forEach(r => {
             if (getRowState(r.key).statusType === 'success') {
                 finished.set(r.key, { done: true, success: true });
@@ -1384,13 +1345,16 @@
         });
 
         let notifiedFirstRoundIssue = false;
+        let lastSavedOkCount = finished.size;
+        let round = 0;
 
-        for (let round = 1; round <= maxRounds; round++) {
-            if (!isRunning) break;
+        // VÒNG LẶP VÔ HẠN CHO TỚI KHI TẤT CẢ CÁC MÔN ĐỀU ĐỖ (HOẶC BẤM NÚT DỪNG)
+        while (isRunning) {
+            round++;
             const pending = targets.filter(r => !finished.has(r.key));
             if (pending.length === 0) break;
 
-            summaryState.title = `⏳ ĐANG BẮN ĐĂNG KÝ (VÒNG ${round}/${maxRounds})`;
+            summaryState.title = `⏳ ĐANG BẮN LIÊN TỤC (VÒNG ${round}) — CÒN ${pending.length} MÔN`;
             renderSummary();
 
             let hit429 = false;
@@ -1398,114 +1362,67 @@
             let sampleMsg = '';
 
             await Promise.all(pending.map(async (row) => {
-                const res = await registerSubjectWithFallback(row, round, maxRounds);
+                const res = await registerSubjectWithFallback(row, round);
                 if (res.done) {
                     finished.set(row.key, res);
                 } else {
                     if (res.hitRateLimit) hit429 = true;
                     if (res.needQueue) needQueue = true;
                     if (res.lastMsg) sampleMsg = res.lastMsg;
-
-                    if (round === maxRounds) {
-                        setRowState(row.key, {
-                            statusType: 'error',
-                            statusText: `❌ Chưa ĐK được`,
-                            subMessage: `⛔ Phản hồi cuối: "${res.lastMsg || 'Chưa đến thời gian đăng ký'}"`
-                        });
-                        finished.set(row.key, { done: true, success: false, reason: res.lastMsg });
-                    }
                 }
             }));
 
             renderAll();
 
-            // Ngay sau Vòng 1, nếu chưa đỗ vì cổng chưa mở -> Bắn Toast báo ngay cho người dùng biết máy chủ trả về gì!
-            if (round === 1 && !notifiedFirstRoundIssue && sampleMsg && finished.size === 0) {
-                notifiedFirstRoundIssue = true;
-                showToast(
-                    `Phản hồi vòng 1/${maxRounds} từ HVTC`,
-                    `Máy chủ báo: "${sampleMsg}" — Hệ thống đang tự động thử lại...`,
-                    'warn',
-                    4500
-                );
-                summaryState.detail = `⚠️ Máy chủ phản hồi: <b>"${sampleMsg}"</b> — Đang tự động thử lại vòng tiếp theo...`;
+            // Nếu vừa có môn mới đỗ ngay trong vòng này -> Tự động chốt sổ ngầm & làm mới bảng web ngay!
+            const currentOkCount = targets.filter(r => getRowState(r.key).statusType === 'success').length;
+            if (currentOkCount > lastSavedOkCount) {
+                lastSavedOkCount = currentOkCount;
+                autoLockConfirmedSubjects(currentOkCount).catch(() => {});
+            }
+
+            if (sampleMsg && currentOkCount < targets.length) {
+                summaryState.detail = `💬 Máy chủ: <b>"${sampleMsg}"</b> — Đang tự động thử lại liên tục (Vòng ${round})...`;
                 renderSummary();
+
+                if (round === 1 && !notifiedFirstRoundIssue && currentOkCount === 0) {
+                    notifiedFirstRoundIssue = true;
+                    showToast(
+                        `Đang tự động thử lại liên tục`,
+                        `Máy chủ báo: "${sampleMsg}" — Tool sẽ bắn liên tục đến khi cổng mở & đỗ đủ môn!`,
+                        'warn',
+                        4500
+                    );
+                }
             }
 
             if (finished.size >= targets.length || !isRunning) break;
             if (needQueue) await refreshQueueTokenOnly();
 
+            // Nhịp nghỉ thông minh chống khóa IP (3.2s khi gặp 429, 1.2s bình thường)
             await new Promise(r => setTimeout(r, hit429 ? 3200 : 1200));
         }
 
         const okCount = targets.filter(r => getRowState(r.key).statusType === 'success').length;
 
-        // Nếu có ít nhất 1 môn đỗ -> Chờ DB xác nhận & Tự động bấm Lưu dữ liệu
         if (okCount > 0 && isRunning) {
-            if (document.getElementById('aof-v4-autosave').checked) {
-                summaryState.mode = 'pending';
-                summaryState.title = `⏳ ĐANG LƯU DỮ LIỆU (${okCount}/${targets.length} MÔN ĐÃ ĐỖ)`;
-                summaryState.detail = `Đã giữ chỗ thành công <b>${okCount}/${targets.length} môn</b>! Đang chờ Database xác nhận để khóa sổ...`;
-                summaryState.saveStatusText = '⏳ Đang chờ Worker ghi vào Database...';
-                renderAll();
+            summaryState.mode = 'pending';
+            summaryState.title = `⏳ ĐANG KHÓA SỔ AN TOÀN (${okCount}/${targets.length} MÔN)...`;
+            summaryState.detail = `Đã đỗ <b>${okCount}/${targets.length} môn</b>! Đang tự động xác nhận Database để không bị hủy sau 15 phút...`;
+            renderAll();
 
-                const { headers } = getAuthHeaders(true);
-                for (let w = 0; w < 12; w++) {
-                    await new Promise(r => setTimeout(r, 1100));
-                    const myList = await syncMyRegisteredClasses();
-                    if (myList.filter(x => x.trang_thai === 1).length >= okCount) break;
-                }
+            const lockedOk = await autoLockConfirmedSubjects(okCount);
 
-                const chotRes = await fetch('/api/registration/chot-du-lieu', {
-                    method: 'POST',
-                    headers,
-                    body: JSON.stringify({})
-                }).then(r => r.json()).catch(() => null);
-
-                if (chotRes && chotRes.is_success) {
-                    summaryState.mode = 'success';
-                    summaryState.title = `🎉 HOÀN TẤT ĐĂNG KÝ (${okCount}/${targets.length} MÔN)`;
-                    summaryState.detail = `Tuyệt vời! Đã đăng ký và <b>Lưu dữ liệu đăng ký</b> thành công <b>${okCount}/${targets.length} môn</b>!`;
-                    summaryState.saveStatusText = '💾 ĐÃ LƯU DỮ LIỆU AN TOÀN!';
-                    summaryState.isSaved = true;
-                    persistSessionStatus();
-                    renderAll();
-                    playChime('all_done');
-                    showToast('HOÀN TẤT ĐĂNG KÝ & LƯU DỮ LIỆU!', `Đã khóa sổ thành công ${okCount}/${targets.length} môn học!`, 'success', 8000);
-                    sendBrowserNotification('🎉 Đăng Ký Tín Chỉ Thành Công!', `Đã đăng ký và lưu dữ liệu ${okCount}/${targets.length} môn.`);
-                    refreshHostWebTable(null, chotRes.data);
-                } else {
-                    summaryState.mode = 'success';
-                    summaryState.title = `✅ ĐÃ GIỮ CHỖ ${okCount}/${targets.length} MÔN`;
-                    summaryState.detail = `Đã đỗ ${okCount}/${targets.length} môn! Hãy bấm nút <b>"💾 Lưu dữ liệu ngay"</b> bên dưới hoặc nút màu xanh trên web.`;
-                    summaryState.saveStatusText = '⚠️ Cần bấm Lưu dữ liệu!';
-                    persistSessionStatus();
-                    renderAll();
-                    playChime('all_done');
-                    showToast(`Đã đỗ ${okCount}/${targets.length} môn!`, 'Hãy bấm nút "Lưu dữ liệu đăng ký" để chốt sổ.', 'warn', 7000);
-                    refreshHostWebTable();
-                }
-            } else {
-                summaryState.mode = 'success';
-                summaryState.title = `✅ ĐÃ ĐĂNG KÝ ${okCount}/${targets.length} MÔN`;
-                summaryState.detail = `Đã giữ chỗ thành công <b>${okCount}/${targets.length} môn</b>. Nhớ bấm "Lưu dữ liệu" để chốt!`;
-                persistSessionStatus();
-                renderAll();
-                playChime('all_done');
-                refreshHostWebTable();
-            }
-        } else if (isRunning) {
-            // Không đỗ môn nào (Ví dụ: bấm thử nghiệm khi chưa tới giờ mở cổng)
-            const sampleReason = Array.from(finished.values())[0]?.reason || 'Chưa đến thời gian mở cổng đăng ký (08:00:00 11/11/2026)';
-            summaryState.mode = 'error';
-            summaryState.title = `❌ CHƯA ĐĂNG KÝ ĐƯỢC (0/${targets.length} MÔN)`;
-            summaryState.detail = `Lý do từ máy chủ HVTC: <b>"${sampleReason}"</b>`;
-            summaryState.saveStatusText = '💾 Chưa có dữ liệu mới để lưu';
+            summaryState.mode = 'success';
+            summaryState.title = `🎉 HOÀN TẤT ĐĂNG KÝ (${okCount}/${targets.length} MÔN)`;
+            summaryState.detail = lockedOk
+                ? `Tuyệt vời! Đã đăng ký và <b>Tự động khóa sổ (Lưu dữ liệu)</b> thành công <b>${okCount}/${targets.length} môn</b>!`
+                : `Đã giữ chỗ thành công <b>${okCount}/${targets.length} môn</b> và cập nhật lên bảng kết quả!`;
             persistSessionStatus();
             renderAll();
-            playChime('error');
-            showToast('Chưa đăng ký được môn nào', `Phản hồi từ trường: "${sampleReason}"`, 'error', 6000);
-            sendBrowserNotification('⚠️ Chưa đăng ký được tín chỉ', `Lý do: ${sampleReason}`);
+            playChime('all_done');
+            showToast('HOÀN TẤT ĐĂNG KÝ TÍN CHỈ!', `Đã đỗ và khóa sổ an toàn ${okCount}/${targets.length} môn học!`, 'success', 8000);
+            sendBrowserNotification('🎉 Đăng Ký Tín Chỉ Thành Công!', `Đã đỗ và lưu an toàn ${okCount}/${targets.length} môn.`);
         }
 
         isRunning = false;
@@ -1524,11 +1441,11 @@
 
         summaryState.visible = true;
         summaryState.mode = 'pending';
-        summaryState.title = `⏰ ĐANG HẸN GIỜ TỰ ĐỘNG (${targetTime})`;
-        summaryState.detail = `Tool sẽ tự động lấy Queue Token và bắn đồng loạt lúc <b>${targetTime}</b>. Hãy giữ nguyên tab này!`;
+        summaryState.title = `⏰ ĐANG CANH GIỜ TỰ ĐỘNG (${targetTime})`;
+        summaryState.detail = `Đúng <b>${targetTime}</b> tool sẽ tự động bắn liên tục cho tới khi đỗ đủ 7 môn!`;
         renderAll();
 
-        showToast('Đã bật chế độ Canh Giờ!', `Đúng ${targetTime} tool sẽ tự động đăng ký & lưu dữ liệu.`, 'info', 4000);
+        showToast('Đã bật chế độ Canh Giờ!', `Đúng ${targetTime} tool sẽ tự động bắn liên tục đến khi thành công.`, 'info', 3500);
 
         armTimer = setInterval(() => {
             if (!isArmed) return;
@@ -1539,12 +1456,12 @@
                 btn.textContent = `🚀 Bật Canh Giờ (${targetTime})`;
                 btn.style.background = '';
                 btn.style.color = '';
-                setTimeout(() => runCampaign(true), 80);
+                setTimeout(() => runCampaign(), 50);
             }
         }, 100);
     };
 
-    // Nút Đăng Ký Ngay
+    // Nút Đăng Ký Ngay (Bắn liên tục đến khi đỗ thì thôi)
     document.getElementById('aof-v4-fire').onclick = () => {
         isArmed = false;
         if (armTimer) clearInterval(armTimer);
@@ -1552,7 +1469,7 @@
         btn.textContent = `🚀 Bật Canh Giờ (${document.getElementById('aof-v4-time').value.trim()})`;
         btn.style.background = '';
         btn.style.color = '';
-        runCampaign(false);
+        runCampaign();
     };
 
     // Nút Dừng
@@ -1565,12 +1482,23 @@
         btn.style.background = '';
         btn.style.color = '';
 
+        // Đưa những môn đang pending về lại trạng thái chờ gọn gàng
+        subjectRows.forEach(r => {
+            if (getRowState(r.key).statusType === 'pending') {
+                setRowState(r.key, {
+                    statusType: 'idle',
+                    statusText: 'Chờ đăng ký',
+                    errorReason: ''
+                });
+            }
+        });
+
         summaryState.visible = true;
-        summaryState.mode = 'error';
-        summaryState.title = '🛑 ĐÃ DỪNG TÁC VỤ';
-        summaryState.detail = 'Bạn đã chủ động dừng quá trình đăng ký tự động.';
+        summaryState.mode = 'idle';
+        summaryState.title = '🛑 ĐÃ DỪNG BẮN TỰ ĐỘNG';
+        summaryState.detail = 'Đã ngắt vòng lặp đăng ký. Bạn có thể bấm "⚡ Đăng Ký Ngay" hoặc "🚀 Bật Canh Giờ" bất cứ lúc nào.';
         renderAll();
-        showToast('Đã dừng tác vụ', 'Mọi tiến trình tự động đã được ngắt.', 'warn', 3000);
+        showToast('Đã dừng tác vụ', 'Mọi tiến trình tự động đã được ngắt.', 'warn', 2500);
     };
 
     // Khởi tạo giao diện lần đầu
