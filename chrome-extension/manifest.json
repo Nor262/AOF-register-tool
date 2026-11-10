@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "AOF Smart Register Assistant v3.5 (HVTC)",
-  "version": "3.5.0",
-  "description": "Bảng điều khiển đăng ký tín chỉ HVTC rõ ràng, hiển thị trọn vẹn 7 môn không cần cuộn, chọn ưu tiên Tiếng Anh & Tự chọn bằng Dropdown.",
+  "name": "AOF Smart Register Assistant v4.0 (HVTC)",
+  "version": "4.0.0",
+  "description": "Bảng điều khiển đăng ký tín chỉ HVTC v4.0: Giao diện Emerald OKLCH, báo trạng thái trực quan từng môn, âm báo & Toast thời gian thực.",
   "content_scripts": [
     {
       "matches": ["https://congdangky.hvtc.edu.vn/*"],
