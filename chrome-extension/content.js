@@ -981,6 +981,73 @@
         return null;
     }
 
+    // Tìm trực tiếp Redux Store của trang web gốc từ cây React 18 Fiber (#root)
+    // Dựa trên source code gốc App.tsx: <Provider store={store}> nằm ngay dưới #root
+    let cachedReduxStore = null;
+    function getHostReduxStore() {
+        if (cachedReduxStore && typeof cachedReduxStore.dispatch === 'function') {
+            return cachedReduxStore;
+        }
+        try {
+            const rootEl = document.getElementById('root');
+            if (!rootEl) return null;
+            const reactKey = Object.keys(rootEl).find(k => k.startsWith('__reactContainer$') || k.startsWith('_reactRootContainer'));
+            if (!reactKey) return null;
+
+            const startNode = rootEl[reactKey]?.current || rootEl[reactKey];
+            const queue = [startNode];
+            const visited = new Set();
+
+            while (queue.length > 0 && visited.size < 400) {
+                const fiber = queue.shift();
+                if (!fiber || visited.has(fiber)) continue;
+                visited.add(fiber);
+
+                const props = fiber.memoizedProps || fiber.pendingProps;
+                if (props && props.store && typeof props.store.dispatch === 'function' && typeof props.store.getState === 'function') {
+                    cachedReduxStore = props.store;
+                    return cachedReduxStore;
+                }
+                const stateVal = fiber.memoizedState?.memoizedState?.store || fiber.stateNode?.store;
+                if (stateVal && typeof stateVal.dispatch === 'function') {
+                    cachedReduxStore = stateVal;
+                    return cachedReduxStore;
+                }
+
+                if (fiber.child) queue.push(fiber.child);
+                if (fiber.sibling) queue.push(fiber.sibling);
+            }
+        } catch (e) {}
+        return null;
+    }
+
+    // Tự động làm mới bảng "Danh sách các lớp tín chỉ đã đăng ký" của trang web gốc
+    // HOÀN TOÀN BẰNG REDUX (KHÔNG F5 / KHÔNG RELOAD TRANG / KHÔNG NGẮT WEBSOCKET SIGNALR)
+    function refreshHostWebTable(myListOptional = null, chotDataOptional = null) {
+        try {
+            const store = getHostReduxStore();
+            if (store) {
+                // Nếu đã có sẵn danh sách từ /api/registration/my thì bơm thẳng vào Reducer ngay lập tức (0ms)
+                if (Array.isArray(myListOptional)) {
+                    store.dispatch({ type: 'REG_LOAD_MY_SUCCESS', payload: myListOptional });
+                }
+                // Nếu vừa chốt dữ liệu thành công thì cập nhật ngay trạng thái chốt trên giao diện gốc
+                if (chotDataOptional) {
+                    store.dispatch({
+                        type: 'REG_CHOT_DU_LIEU_SUCCESS',
+                        payload: {
+                            ngayChotDuLieu: chotDataOptional.ngayChotDuLieu || new Date().toISOString(),
+                            classIds: chotDataOptional.classIds || []
+                        }
+                    });
+                }
+                // Đồng thời kích hoạt Saga chuẩn của trang web để đồng bộ lại danh sách ĐK & học phí
+                store.dispatch({ type: 'REG_LOAD_MY_START', payload: undefined });
+                store.dispatch({ type: 'FINANCIAL_LOAD_START', payload: undefined });
+            }
+        } catch (e) {}
+    }
+
     // Đồng bộ danh sách các môn ĐÃ ĐĂNG KÝ từ /api/registration/my để tô xanh ngay lập tức
     async function syncMyRegisteredClasses() {
         const { headers, accessToken } = getAuthHeaders(true);
@@ -989,6 +1056,9 @@
             const myRes = await fetch('/api/registration/my', { method: 'GET', headers }).then(r => r.json()).catch(() => null);
             if (myRes && myRes.is_success && Array.isArray(myRes.data)) {
                 const myList = myRes.data;
+                // Cập nhật luôn bảng của trang web gốc qua Redux Store (không cần F5)
+                refreshHostWebTable(myList);
+
                 if (myList.length > 0) {
                     const classById = new Map(allRawClasses.map(c => [Number(c.classId), c]));
                     let matchedAny = false;
@@ -1034,29 +1104,6 @@
             }
         } catch (e) {}
         return [];
-    }
-
-    // Tự động làm mới bảng "Danh sách các lớp tín chỉ đã đăng ký" của trang web gốc
-    function refreshHostWebTable(reloadIfNecessary = false) {
-        try {
-            // Cách 1: Kích hoạt sự kiện thay đổi trên bộ lọc hoặc nút tab của React để React tự fetch lại
-            const selects = document.querySelectorAll('select');
-            selects.forEach(sel => {
-                if (sel.id !== 'aof-sel-eng' && sel.id !== 'aof-sel-elec') {
-                    sel.dispatchEvent(new Event('change', { bubbles: true }));
-                }
-            });
-            window.dispatchEvent(new Event('focus'));
-            document.dispatchEvent(new Event('visibilitychange'));
-
-            // Cách 2: Nếu vừa đăng ký đỗ môn hoặc chốt xong, reload trang sau 1.2s (trạng thái xanh trên extension vẫn được giữ nguyên 100%)
-            if (reloadIfNecessary) {
-                persistSessionStatus();
-                setTimeout(() => {
-                    window.location.reload();
-                }, 1200);
-            }
-        } catch (e) {}
     }
 
     async function checkConnectionAndSync(showMsg = true) {
@@ -1108,9 +1155,10 @@
     }
 
     document.getElementById('aof-v4-btn-check').onclick = () => checkConnectionAndSync(true);
-    document.getElementById('aof-btn-refresh-web').onclick = () => {
-        showToast('Đang làm mới bảng web', 'Đang cập nhật danh sách các lớp tín chỉ đã đăng ký...', 'info', 2000);
-        refreshHostWebTable(true);
+    document.getElementById('aof-btn-refresh-web').onclick = async () => {
+        await syncMyRegisteredClasses();
+        refreshHostWebTable();
+        showToast('Đã đồng bộ bảng web (Không F5)', 'Bảng "Danh sách các lớp tín chỉ đã đăng ký" đã được cập nhật ngầm qua Redux!', 'success', 2500);
     };
 
     // Nút Lưu dữ liệu thủ công ngay trong bảng tổng kết
@@ -1129,9 +1177,9 @@
             persistSessionStatus();
             renderSummary();
             playChime('all_done');
-            showToast('Lưu dữ liệu thành công!', 'Toàn bộ tín chỉ đã được khóa sổ an toàn!', 'success', 6000);
+            showToast('Lưu dữ liệu thành công!', 'Toàn bộ tín chỉ đã được khóa sổ an toàn (không cần F5)!', 'success', 6000);
             sendBrowserNotification('🎉 Đã Lưu Dữ Liệu Tín Chỉ!', 'Toàn bộ các lớp học phần đã được chốt thành công.');
-            refreshHostWebTable(true);
+            refreshHostWebTable(null, chotRes.data);
         } else {
             const errMsg = chotRes?.message || 'Chưa có môn nào được ghi nhận hoặc cổng chưa mở';
             showToast('Chưa thể Lưu dữ liệu', errMsg, 'warn', 4500);
@@ -1204,6 +1252,7 @@
                 playChime('subject_ok');
                 showToast(`Đỗ môn: ${row.ten_mon}`, `Đã giữ chỗ lớp ${cls.ten_lop_hp} (#${cls.classId}) thành công!`, 'success', 5000);
                 sendBrowserNotification(`✅ Đỗ môn: ${row.ten_mon}`, `Lớp: ${cls.ten_lop_hp} (#${cls.classId})`);
+                refreshHostWebTable();
                 return { done: true, success: true, cls };
             }
 
@@ -1217,6 +1266,7 @@
                     subMessage: `Học phần này đã được đăng ký thành công trên hệ thống.`
                 });
                 renderAll();
+                refreshHostWebTable();
                 return { done: true, success: true, cls };
             }
 
@@ -1287,7 +1337,7 @@
             return;
         }
 
-        // Якщо bấm thủ công thì thử 4 vòng (nhanh gọn, báo kết quả ngay); nếu hẹn giờ 08:00:00 thì quét 14 vòng
+        // Nếu bấm thủ công thì thử 4 vòng (nhanh gọn, báo kết quả ngay); nếu hẹn giờ 08:00:00 thì quét 14 vòng
         const maxRounds = isAutoTimed ? 14 : 4;
 
         // Bước 1: Đổi màu toàn bộ các dòng được chọn sang màu Vàng (Pending) ngay lập tức (0ms)
@@ -1413,7 +1463,7 @@
                     playChime('all_done');
                     showToast('HOÀN TẤT ĐĂNG KÝ & LƯU DỮ LIỆU!', `Đã khóa sổ thành công ${okCount}/${targets.length} môn học!`, 'success', 8000);
                     sendBrowserNotification('🎉 Đăng Ký Tín Chỉ Thành Công!', `Đã đăng ký và lưu dữ liệu ${okCount}/${targets.length} môn.`);
-                    refreshHostWebTable(true);
+                    refreshHostWebTable(null, chotRes.data);
                 } else {
                     summaryState.mode = 'success';
                     summaryState.title = `✅ ĐÃ GIỮ CHỖ ${okCount}/${targets.length} MÔN`;
@@ -1423,7 +1473,7 @@
                     renderAll();
                     playChime('all_done');
                     showToast(`Đã đỗ ${okCount}/${targets.length} môn!`, 'Hãy bấm nút "Lưu dữ liệu đăng ký" để chốt sổ.', 'warn', 7000);
-                    refreshHostWebTable(true);
+                    refreshHostWebTable();
                 }
             } else {
                 summaryState.mode = 'success';
@@ -1432,7 +1482,7 @@
                 persistSessionStatus();
                 renderAll();
                 playChime('all_done');
-                refreshHostWebTable(true);
+                refreshHostWebTable();
             }
         } else if (isRunning) {
             // Không đỗ môn nào (Ví dụ: bấm thử nghiệm khi chưa tới giờ mở cổng)
