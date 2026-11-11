@@ -486,24 +486,27 @@
             <!-- 3. Danh sách đầy đủ 7 môn (Giữ cố định 2 dòng/môn, không bao giờ làm tràn màn hình) -->
             <div id="aof-v4-list" class="aof-table-wrap"></div>
 
-            <!-- 4. Cài đặt Giờ & Tự động chốt sổ -->
+            <!-- 4. Cài đặt Giờ & Tùy chọn Tự động chốt sổ -->
             <div style="display: flex; justify-content: space-between; align-items: center; background: var(--muted); padding: 6px 10px; border-radius: var(--radius-lg); border: 1px solid var(--border);">
                 <div style="display: flex; align-items: center; gap: 5px;">
                     <label style="font-weight: 700; font-size: 11.5px; color: var(--foreground);">⏰ Hẹn giờ bắn:</label>
                     <input id="aof-v4-time" type="text" value="08:00:00" style="width: 74px; padding: 2px 5px; font-family: var(--font-mono); font-weight: 700; background: var(--card); color: var(--foreground); border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 11.5px; text-align: center;">
                 </div>
-                <span style="font-size: 11px; font-weight: 600; color: oklch(0.35 0.11 160);" title="Hệ thống trường sẽ tự hủy môn sau 15 phút nếu không chốt. Tool sẽ tự động chốt ngay khi đỗ!">
-                    🔒 Tự động khóa sổ khi đỗ
-                </span>
+                <label style="font-size: 11px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 4px; color: var(--foreground);" title="Nếu bỏ tích, tool chỉ giữ chỗ lớp. Bạn có thể tự do hủy/sửa đổi lớp rồi tự bấm 'Lưu dữ liệu' sau (trước 15 phút).">
+                    <input id="aof-v4-autosave" type="checkbox" style="width: 13.5px; height: 13.5px; accent-color: oklch(0.55 0.14 160);"> Tự động "Lưu dữ liệu"
+                </label>
             </div>
 
-            <!-- 5. Nút điều khiển -->
-            <div style="display: flex; gap: 6px;">
-                <button id="aof-v4-arm" class="aof-btn-main aof-btn-primary" style="flex: 1.35;">
+            <!-- 5. Nút điều khiển & Nút Lưu dữ liệu thủ công -->
+            <div style="display: flex; gap: 5px;">
+                <button id="aof-v4-arm" class="aof-btn-main aof-btn-primary" style="flex: 1.3;">
                     🚀 Bật Canh Giờ (08:00:00)
                 </button>
                 <button id="aof-v4-fire" class="aof-btn-main aof-btn-fire" style="flex: 1;">
                     ⚡ Đăng Ký Ngay
+                </button>
+                <button id="aof-v4-manual-save" class="aof-btn-main" style="background: oklch(0.92 0.04 160); color: oklch(0.26 0.08 160); border: 1px solid var(--chart-5); font-weight: 700;" title="Bấm khi bạn đã ưng ý danh sách lớp và muốn chốt sổ chính thức">
+                    💾 Lưu dữ liệu
                 </button>
                 <button id="aof-v4-stop" class="aof-btn-main aof-btn-stop">
                     Dừng
@@ -1364,9 +1367,10 @@
 
             renderAll();
 
-            // Nếu vừa có môn mới đỗ ngay trong vòng này -> Tự động chốt sổ ngầm & làm mới bảng web ngay!
+            // Nếu có bật tùy chọn "Tự động Lưu dữ liệu" VÀ vừa có môn mới đỗ -> mới tự chốt sổ ngầm
+            const autoSaveChecked = document.getElementById('aof-v4-autosave')?.checked;
             const currentOkCount = targets.filter(r => getRowState(r.key).statusType === 'success').length;
-            if (currentOkCount > lastSavedOkCount) {
+            if (autoSaveChecked && currentOkCount > lastSavedOkCount) {
                 lastSavedOkCount = currentOkCount;
                 autoLockConfirmedSubjects(currentOkCount).catch(() => {});
             }
@@ -1394,29 +1398,62 @@
         }
 
         const okCount = targets.filter(r => getRowState(r.key).statusType === 'success').length;
+        const autoSaveChecked = document.getElementById('aof-v4-autosave')?.checked;
 
         if (okCount > 0 && isRunning) {
-            summaryState.mode = 'pending';
-            summaryState.title = `⏳ ĐANG KHÓA SỔ AN TOÀN (${okCount}/${targets.length} MÔN)...`;
-            summaryState.detail = `Đã đỗ <b>${okCount}/${targets.length} môn</b>! Đang tự động xác nhận Database để không bị hủy sau 15 phút...`;
-            renderAll();
+            if (autoSaveChecked) {
+                summaryState.mode = 'pending';
+                summaryState.title = `⏳ ĐANG KHÓA SỔ AN TOÀN (${okCount}/${targets.length} MÔN)...`;
+                summaryState.detail = `Đã đỗ <b>${okCount}/${targets.length} môn</b>! Đang tự động xác nhận Database để không bị hủy sau 15 phút...`;
+                renderAll();
 
-            const lockedOk = await autoLockConfirmedSubjects(okCount);
+                const lockedOk = await autoLockConfirmedSubjects(okCount);
 
-            summaryState.mode = 'success';
-            summaryState.title = `🎉 HOÀN TẤT ĐĂNG KÝ (${okCount}/${targets.length} MÔN)`;
-            summaryState.detail = lockedOk
-                ? `Tuyệt vời! Đã đăng ký và <b>Tự động khóa sổ (Lưu dữ liệu)</b> thành công <b>${okCount}/${targets.length} môn</b>!`
-                : `Đã giữ chỗ thành công <b>${okCount}/${targets.length} môn</b> và cập nhật lên bảng kết quả!`;
+                summaryState.mode = 'success';
+                summaryState.title = `🎉 HOÀN TẤT ĐĂNG KÝ (${okCount}/${targets.length} MÔN)`;
+                summaryState.detail = lockedOk
+                    ? `Tuyệt vời! Đã đăng ký và <b>Tự động khóa sổ (Lưu dữ liệu)</b> thành công <b>${okCount}/${targets.length} môn</b>!`
+                    : `Đã giữ chỗ thành công <b>${okCount}/${targets.length} môn</b> và cập nhật lên bảng kết quả!`;
+            } else {
+                summaryState.mode = 'success';
+                summaryState.title = `✅ ĐÃ GIỮ CHỖ ${okCount}/${targets.length} MÔN`;
+                summaryState.detail = `Đã giữ chỗ thành công <b>${okCount}/${targets.length} môn</b>! Bạn có thể tự do sửa/hủy trên web. Khi ưng ý, hãy bấm <b>"💾 Lưu dữ liệu"</b> (trước 15 phút).`;
+            }
+
             persistSessionStatus();
             renderAll();
             playChime('all_done');
-            showToast('HOÀN TẤT ĐĂNG KÝ TÍN CHỈ!', `Đã đỗ và khóa sổ an toàn ${okCount}/${targets.length} môn học!`, 'success', 8000);
-            sendBrowserNotification('🎉 Đăng Ký Tín Chỉ Thành Công!', `Đã đỗ và lưu an toàn ${okCount}/${targets.length} môn.`);
+            showToast('HOÀN TẤT ĐĂNG KÝ!', `Đã giữ chỗ thành công ${okCount}/${targets.length} môn học!`, 'success', 8000);
+            sendBrowserNotification('🎉 Đăng Ký Tín Chỉ Thành Công!', `Đã giữ chỗ thành công ${okCount}/${targets.length} môn.`);
         }
 
         isRunning = false;
     }
+
+    // Nút Lưu dữ liệu thủ công
+    document.getElementById('aof-v4-manual-save').onclick = async () => {
+        const { headers } = getAuthHeaders(true);
+        showToast('Đang gửi yêu cầu Lưu dữ liệu', 'Đang chốt dữ liệu để khóa sổ chính thức...', 'info', 2500);
+        const chotRes = await fetch('/api/registration/chot-du-lieu', {
+            method: 'POST',
+            headers,
+            body: JSON.stringify({})
+        }).then(r => r.json()).catch(() => null);
+
+        if (chotRes && chotRes.is_success) {
+            summaryState.isSaved = true;
+            summaryState.mode = 'success';
+            summaryState.detail = '🎉 ĐÃ LƯU DỮ LIỆU CHÍNH THỨC! Danh sách môn đã được khóa sổ an toàn.';
+            persistSessionStatus();
+            renderAll();
+            playChime('all_done');
+            showToast('Lưu dữ liệu thành công!', 'Toàn bộ tín chỉ đã được khóa sổ an toàn!', 'success', 5000);
+            refreshHostWebTable(null, chotRes.data);
+        } else {
+            const msg = chotRes?.message || 'Chưa thể lưu dữ liệu hoặc chưa có môn nào được ghi nhận';
+            showToast('Chưa thể Lưu dữ liệu', msg, 'warn', 4000);
+        }
+    };
 
     // Nút Hẹn giờ tự động bắn (08:00:00)
     document.getElementById('aof-v4-arm').onclick = () => {
